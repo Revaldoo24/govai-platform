@@ -42,25 +42,9 @@ Example request:
 - PostgreSQL is used for policies and audit logs
 - Kubernetes manifests are included under `k8s/`
 
-## Frontend (Vercel)
+## Frontend (Local)
 Frontend lives in `frontend/` (Next.js). It proxies requests to the backend gateway.
-
-Required env vars (Vercel Project Settings):
-- `GOVAI_GATEWAY_URL` (example `http://your-backend-host:8000`)
-- `GOVAI_API_KEY` (same as gateway)
-- `GOVAI_GOV_URL` (example `http://your-backend-host:8003`)
 
 Local dev:
 1. Copy `frontend/.env.example` to `frontend/.env.local`
 2. Run `npm install` then `npm run dev`
-
-## Backend (Render)
-This repo includes `render.yaml` for a free-tier deployment on Render.
-
-Steps:
-1. Push this repo to GitHub.
-2. In Render, create a new Blueprint and point it to your repo.
-3. Replace `repo:` in `render.yaml` with your GitHub repo URL.
-4. Set `GOVAI_API_KEY` in Render environment variables.
-
-Render will provision a free PostgreSQL database and deploy all services.
