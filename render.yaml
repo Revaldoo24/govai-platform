@@ -2,7 +2,7 @@ services:
   - type: web
     name: govai-gateway
     env: docker
-    repo: https://github.com/your-user/your-repo
+    repo: https://github.com/Revaldoo24/govai-platform.git
     branch: main
     dockerfilePath: services/gateway/Dockerfile
     dockerContext: .
