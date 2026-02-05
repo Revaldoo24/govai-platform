@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: govai-explainability
+  namespace: govai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: govai-explainability
+  template:
+    metadata:
+      labels:
+        app: govai-explainability
+    spec:
+      containers:
+        - name: explainability
+          image: govai-explainability:latest
+          env:
+            - name: EXPLAIN_PORT
+              value: "8004"
+          ports:
+            - containerPort: 8004
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "300m"
+              memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: govai-explainability
+  namespace: govai
+spec:
+  selector:
+    app: govai-explainability
+  ports:
+    - port: 8004
+      targetPort: 8004
+      name: http
+  type: ClusterIP
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: govai-explainability-hpa
+  namespace: govai
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: govai-explainability
+  minReplicas: 1
+  maxReplicas: 2
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

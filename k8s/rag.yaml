@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: govai-rag
+  namespace: govai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: govai-rag
+  template:
+    metadata:
+      labels:
+        app: govai-rag
+    spec:
+      containers:
+        - name: rag
+          image: govai-rag:latest
+          env:
+            - name: RAG_PORT
+              value: "8001"
+            - name: HF_EMBED_MODEL
+              value: sentence-transformers/all-MiniLM-L6-v2
+            - name: HF_GEN_MODEL
+              value: distilgpt2
+          ports:
+            - containerPort: 8001
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "2Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: govai-rag
+  namespace: govai
+spec:
+  selector:
+    app: govai-rag
+  ports:
+    - port: 8001
+      targetPort: 8001
+      name: http
+  type: ClusterIP
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: govai-rag-hpa
+  namespace: govai
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: govai-rag
+  minReplicas: 1
+  maxReplicas: 2
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: govai-governance
+  namespace: govai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: govai-governance
+  template:
+    metadata:
+      labels:
+        app: govai-governance
+    spec:
+      containers:
+        - name: governance
+          image: govai-governance:latest
+          env:
+            - name: GOV_PORT
+              value: "8003"
+            - name: POSTGRES_USER
+              value: govai
+            - name: POSTGRES_PASSWORD
+              value: govai
+            - name: POSTGRES_DB
+              value: govai
+            - name: POSTGRES_HOST
+              value: govai-postgres
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POLICY_DEFAULT_CONFIDENCE
+              value: "0.25"
+            - name: POLICY_REQUIRE_CITATIONS
+              value: "true"
+          ports:
+            - containerPort: 8003
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: govai-governance
+  namespace: govai
+spec:
+  selector:
+    app: govai-governance
+  ports:
+    - port: 8003
+      targetPort: 8003
+      name: http
+  type: ClusterIP
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: govai-governance-hpa
+  namespace: govai
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: govai-governance
+  minReplicas: 1
+  maxReplicas: 2
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

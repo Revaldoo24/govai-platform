@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: govai-bias
+  namespace: govai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: govai-bias
+  template:
+    metadata:
+      labels:
+        app: govai-bias
+    spec:
+      containers:
+        - name: bias
+          image: govai-bias:latest
+          env:
+            - name: BIAS_PORT
+              value: "8002"
+          ports:
+            - containerPort: 8002
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "300m"
+              memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: govai-bias
+  namespace: govai
+spec:
+  selector:
+    app: govai-bias
+  ports:
+    - port: 8002
+      targetPort: 8002
+      name: http
+  type: ClusterIP
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: govai-bias-hpa
+  namespace: govai
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: govai-bias
+  minReplicas: 1
+  maxReplicas: 2
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

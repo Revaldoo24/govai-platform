@@ -1,0 +1,10 @@
+fastapi==0.115.6
+uvicorn==0.30.6
+pydantic==2.9.2
+langchain==0.2.16
+langchain-community==0.2.16
+faiss-cpu==1.8.0.post1
+sentence-transformers==3.0.1
+transformers==4.44.2
+torch==2.4.1
+numpy==1.26.4

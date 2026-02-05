@@ -1,0 +1,111 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: govai-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rag:
+    build: ./services/rag
+    container_name: govai-rag
+    environment:
+      RAG_PORT: ${RAG_PORT}
+      HF_EMBED_MODEL: ${HF_EMBED_MODEL}
+      HF_GEN_MODEL: ${HF_GEN_MODEL}
+    ports:
+      - "${RAG_PORT}:${RAG_PORT}"
+    healthcheck:
+      test: ["CMD-SHELL", "python - <<'PY'\nimport urllib.request\nimport sys\ntry:\n    urllib.request.urlopen('http://localhost:8001/health', timeout=3)\n    sys.exit(0)\nexcept Exception:\n    sys.exit(1)\nPY"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  bias:
+    build: ./services/bias
+    container_name: govai-bias
+    environment:
+      BIAS_PORT: ${BIAS_PORT}
+    ports:
+      - "${BIAS_PORT}:${BIAS_PORT}"
+    healthcheck:
+      test: ["CMD-SHELL", "python - <<'PY'\nimport urllib.request\nimport sys\ntry:\n    urllib.request.urlopen('http://localhost:8002/health', timeout=3)\n    sys.exit(0)\nexcept Exception:\n    sys.exit(1)\nPY"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  governance:
+    build: ./services/governance
+    container_name: govai-governance
+    environment:
+      GOV_PORT: ${GOV_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POLICY_DEFAULT_CONFIDENCE: ${POLICY_DEFAULT_CONFIDENCE}
+      POLICY_REQUIRE_CITATIONS: ${POLICY_REQUIRE_CITATIONS}
+    ports:
+      - "${GOV_PORT}:${GOV_PORT}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python - <<'PY'\nimport urllib.request\nimport sys\ntry:\n    urllib.request.urlopen('http://localhost:8003/health', timeout=3)\n    sys.exit(0)\nexcept Exception:\n    sys.exit(1)\nPY"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  explainability:
+    build: ./services/explainability
+    container_name: govai-explainability
+    environment:
+      EXPLAIN_PORT: ${EXPLAIN_PORT}
+    ports:
+      - "${EXPLAIN_PORT}:${EXPLAIN_PORT}"
+    healthcheck:
+      test: ["CMD-SHELL", "python - <<'PY'\nimport urllib.request\nimport sys\ntry:\n    urllib.request.urlopen('http://localhost:8004/health', timeout=3)\n    sys.exit(0)\nexcept Exception:\n    sys.exit(1)\nPY"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  gateway:
+    build: ./services/gateway
+    container_name: govai-gateway
+    environment:
+      GATEWAY_PORT: ${GATEWAY_PORT}
+      RAG_URL: http://rag:${RAG_PORT}
+      BIAS_URL: http://bias:${BIAS_PORT}
+      GOV_URL: http://governance:${GOV_PORT}
+      EXPLAIN_URL: http://explainability:${EXPLAIN_PORT}
+      GOVAI_API_KEY: ${GOVAI_API_KEY}
+      GOVAI_ENFORCE_API_KEY: ${GOVAI_ENFORCE_API_KEY}
+    ports:
+      - "${GATEWAY_PORT}:${GATEWAY_PORT}"
+    depends_on:
+      rag:
+        condition: service_healthy
+      bias:
+        condition: service_healthy
+      governance:
+        condition: service_healthy
+      explainability:
+        condition: service_healthy
+
+volumes:
+  pgdata:

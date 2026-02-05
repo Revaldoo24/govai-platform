@@ -1,0 +1,4 @@
+{"id": "doc-001", "title": "Responsible AI Principles", "text": "Responsible AI requires transparency, fairness, accountability, privacy protection, and human oversight. Systems should be auditable and designed to minimize harm."}
+{"id": "doc-002", "title": "Governance in Public Sector", "text": "Public sector AI deployments must comply with regulatory guidelines, ensure explainability, and provide mechanisms for appeal and review."}
+{"id": "doc-003", "title": "RAG Basics", "text": "Retrieval-augmented generation grounds model outputs in trusted sources to reduce hallucinations and improve traceability."}
+{"id": "doc-004", "title": "Bias Monitoring", "text": "Bias monitoring should include input screening, output evaluation, fairness metrics, and drift detection over time."}

@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: govai-gateway
+  namespace: govai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: govai-gateway
+  template:
+    metadata:
+      labels:
+        app: govai-gateway
+    spec:
+      containers:
+        - name: gateway
+          image: govai-gateway:latest
+          env:
+            - name: GATEWAY_PORT
+              value: "8000"
+            - name: RAG_URL
+              value: http://govai-rag:8001
+            - name: BIAS_URL
+              value: http://govai-bias:8002
+            - name: GOV_URL
+              value: http://govai-governance:8003
+            - name: EXPLAIN_URL
+              value: http://govai-explainability:8004
+            - name: GOVAI_API_KEY
+              value: "change-me"
+            - name: GOVAI_ENFORCE_API_KEY
+              value: "true"
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: govai-gateway
+  namespace: govai
+spec:
+  selector:
+    app: govai-gateway
+  ports:
+    - port: 8000
+      targetPort: 8000
+      name: http
+  type: ClusterIP
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: govai-gateway-hpa
+  namespace: govai
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: govai-gateway
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
